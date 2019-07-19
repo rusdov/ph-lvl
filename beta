@@ -1,0 +1,102 @@
+//#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
+#include <SPI.h>
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <SimpleTimer.h> //here is the SimpleTimer library
+SimpleTimer timer; // Create a Timer object called "timer"!
+
+//pin setup
+const byte pHpin = A0;    // Connect the sensor's Po output to an analogue pin - whichever one you choose
+const int relayPin = 13; //Connect to the relay that will control the power to a pH regulating pump or valve
+
+//const
+
+//PH pmp const
+int encoderPosCount;
+int phPmpTimer = yb0;
+unsigned long phPmpOnTime;
+bool phPmpOn;
+
+//led widgets
+WidgetLED led1(V7); //Connect a LED widget to Virtual pin 7 in the app
+
+// Variables:-
+float Po;
+float pH = 10;
+
+//blynk auth
+char auth[] = "GSzoeA7v1k6pJUdYMk5o_pBkCYzjI9Sd";
+char ssid[] = "adm13";
+char pass[] = "80679767510";
+
+//widget read
+BLYNK_WRITE(3){
+  encoderPosCount = param.asInt(); //Connect a slider widget to virtual pin 3 in the app. Slider range should be 0 to 140.
+}
+BLYNK_WRITE(4){
+  phPmpTimer = param.asInt();
+}
+
+void ph(){
+  Po = (1023 - analogRead(pHpin));
+  Serial.print(Po); //This is the raw voltage value for the pH module
+   //Calibration values:
+   //405@pH7
+   //290@ph4
+
+  Serial.print(", ph =");
+  float pHm = map(Po, 290, 406, 400, 700); //maps voltage(Po) from calibration values at 4.00 and 7.00 pH
+  float pH = (pHm/100);
+  Serial.println(pH, 2); 
+  Serial.println(", setpoint=");
+  Serial.println((encoderPosCount/10));
+  Blynk.virtualWrite(V0, pH);
+  
+}
+
+
+
+void blynker() {//Writes the setpoint value to a gague widget.Connect the gague widget to virtual pin 1
+    Blynk.virtualWrite(V1, (encoderPosCount/10));
+    
+}
+ 
+void setup(){
+  Serial.begin(9600); // initialize serial communications at 9600 bps
+  pinMode(pHpin, INPUT);
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin,LOW);
+  timer.setInterval(5000, ph);
+  Blynk.begin(auth, ssid, pass);
+  timer.setInterval(2000, blynker); //the number for the timers sets the interval for how frequently the function is called. Keep it above 1000 to avoid spamming the server.
+  timer.setInterval(10000, ph);
+  phPmpOn = false; 
+  
+
+}
+
+
+void loop(){
+    Blynk.run(); 
+    timer.run();
+   
+   //pump processing
+   if (pH > (encoderPosCount/10)){
+   digitalWrite(relayPin, HIGH);
+   phPmpOn = true;
+   phPmpOnTime = millis(); 
+   led1.on();
+   delay(phPmpTimer);
+}
+
+if(phPmpOn)
+if(millis() - phPmpOnTime > phPmpTimer){
+  digitalWrite(relayPin, LOW); 
+  led1.off();
+  phPmpOn = false;      
+}
+}
+
+ 
+
+
