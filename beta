@@ -25,9 +25,9 @@ float Po;
 float pH = 10;
 
 //blynk auth
-char auth[] = "GSzoeA7v1k6pJUdYMk5o_pBkCYzjI9Sd";
-char ssid[] = "adm13";
-char pass[] = "80679767510";
+char auth[] = "---------------";
+char ssid[] = "----";
+char pass[] = "--------";
 
 //widget read
 BLYNK_WRITE(3){
